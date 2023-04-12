@@ -8,7 +8,7 @@ OOP.lua intercepts changes to the global scope and writes them to the prototype 
 ```lua
 require "OOP"
 
-local Car = class(function()
+local Car = class()(function()
     model = "BMW M3"
     local serial_number = 24542
     
@@ -19,14 +19,14 @@ end)
 
 local myCar = Car()
 print(myCar.model) -- output: "BMW M3"
-print(myCar.serial_number) -- output: nil
+print(myCar.serial_number) -- output: nil (becouse serial_number is private variable)
 print(myCar:get_serial()) -- output: "serial_number: 24542"
 ```
 #### Methods
 ```lua
 require "OOP"
 
-local Car = class(function()
+local Car = class()(function()
     model = "BMW M3"
 
     function changeModel(newModel)
@@ -44,7 +44,7 @@ The "new" method is absolutely the same method as all the others. Its main diffe
 ```lua
 require "OOP"
 
-local Car = class(function()
+local Car = class()(function()
     function new(carModel)
    	    this.model = carModel
     end
@@ -58,7 +58,7 @@ The "inherit" function allows you to create a class inherited from another class
 ```lua
 require "OOP"
 
-local A = class(function()
+local A = class()(function()
     function parent_func()
         return "called from parent"
     end
@@ -68,7 +68,7 @@ local A = class(function()
     end
 end)
 
-local B = inherit(A)(function()
+local B = class(A)(function()
     function get_class()
         return "B"
     end
@@ -77,4 +77,34 @@ end)
 local object = B()
 print(object:parent_func()) -- output: "called from parent"
 print(object:get_class()) -- output: "B"
+```
+
+### Multiple inheritance
+The "inherit" function allows you to create a class inherited from another class
+```lua
+require "OOP"
+
+local A = class()(function()
+    by_A = "A"
+end)
+
+local B = class()(function()
+    by_B = "B"
+    by_A = "A, by B"
+end)
+
+local C = class(A, B)(function()
+    by_C = "C"
+end)
+
+local a = A()
+local b = B()
+local c = C()
+
+print(a.by_A) -- output: "A"
+print(b.by_B) -- output: "B"
+
+print(c.by_A) -- output: "A, by B"
+print(c.by_B) -- output: "B"
+print(c.by_C) -- output: "C"
 ```
