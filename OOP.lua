@@ -4,39 +4,71 @@
 -- Github: https://github.com/L00NEY9/class.lua
 -- Version: 2.1
 
+--- @region: table plus
+function table:reverse(t)
+    for i = 1, #t // 2, 1 do
+        t[i], t[#t - i + 1] = t[#t - i + 1], t[i]
+    end
+
+    return t
+end
+
+function table:copy(t)
+    if type(t) ~= "table" then
+        return {}
+    end
+
+    local result = {}
+
+    for key, value in pairs(t) do
+        result[key] = value
+    end
+
+    return result
+end
+
+function table:remove_duplicate(t)
+    if type(t) ~= "table" then
+        return {}
+    end
+
+    local hash, result = {}, {}
+
+    for _, v in ipairs(t) do
+        if not hash[v] then
+            result[#result + 1] = v
+            hash[v] = true
+        end
+    end
+
+    return result
+end
+--- @endregion
+
 --- @region: help functions
 local classes, decoratorsStack, decorators = {}, {}, {}
 
-local __copy_table = function(tableToCopy)
-    local newTable = {}
-    for key, value in pairs(tableToCopy) do
-        newTable[key] = value
-    end
-
-    return newTable
-end
-
-local __collect_global_changes = function(initiatorOfChanges, onChanges)
-    if not onChanges then onChanges = function() end end
+local collect_global_changes = function(init_changes, on_changes)
+    if not on_changes then on_changes = function() end end
     local changes = {}
 
     setmetatable(_G, {
         __newindex = function(self, key, value)
             changes[key] = value
-            onChanges(key)
+            on_changes(key)
         end
     })
 
-    initiatorOfChanges()
+    init_changes()
     setmetatable(_G, {})
 
     return changes
 end
 
-local __bind_method = function(method, context, currentClass)
+local bind_method = function(method, context, current_class)
     return function(...)
         _G.this = context
-        _G.__class = currentClass
+        _G.__class = current_class
         local returned = method(...)
         _G.__class = nil
         _G.this = nil
@@ -45,22 +77,22 @@ local __bind_method = function(method, context, currentClass)
     end
 end
 
-local __build_instance_from_prototype = function(prototype, currentClass)
-    local instance = __copy_table(prototype)
+local build_instance_from_prototype = function(prototype, current_class)
+    local instance = table:copy(prototype)
 
     for key, value in pairs(instance) do
         if type(value) == "function" then
-            instance[key] = __bind_method(value, instance, currentClass)
+            instance[key] = bind_method(value, instance, current_class)
         end
     end
 
     return instance
 end
 
-local __apply_prototype_decorators = function(prototype)
-    for fieldName, _ in pairs(decorators) do
-        for _, decorator in ipairs(decorators[fieldName]) do
-            decorator(prototype, fieldName, classes[#classes])
+local apply_prototype_decorators = function(prototype)
+    for field_name, _ in pairs(decorators) do
+        for _, decorator in ipairs(decorators[field_name]) do
+            decorator(prototype, field_name, classes[#classes])
         end
     end
 end
@@ -70,21 +102,21 @@ end
 --- @region: API
 -- local objects = private
 -- global objects = public
-function class(initiatorFn)
+function class(init_function)
     classes[#classes + 1] = {}
     decoratorsStack = {}
     decorators = {}
 
-    local prototype = __collect_global_changes(initiatorFn, function(key)
-        decorators[key] = __copy_table(decoratorsStack)
+    local prototype = collect_global_changes(init_function, function(key)
+        decorators[key] = table:copy(decoratorsStack)
         decoratorsStack = {}
     end)
 
-    __apply_prototype_decorators(prototype)
+    apply_prototype_decorators(prototype)
     classes[#classes].prototype = prototype
 
     classes[#classes].new = function(self, ...)
-        local instance = __build_instance_from_prototype(self.prototype, self)
+        local instance = build_instance_from_prototype(self.prototype, self)
 
         if instance.new then
             instance.new(...)
@@ -100,21 +132,26 @@ function class(initiatorFn)
     return classes[#classes]
 end
 
-function inherit(parentClass)
-    local parentClassPrototype = __copy_table(parentClass.prototype)
+function inherit(...)
+    local parents = table:reverse(table:remove_duplicate({ ... }))
 
-    return function(initiatorFn)
-        local newClass = class(initiatorFn)
-        newClass.parent = parentClass
+    return function(init_function)
+        local new_class = class(init_function)
+        new_class.parents = {}
 
-        for fieldName, fieldValue in pairs(parentClassPrototype) do
-            if not newClass.prototype[fieldName] then
-                newClass.prototype[fieldName] = fieldValue
+        for i = 1, #parents do
+            local prototype = table:copy(parents[i].prototype)
+            new_class.parents[#new_class.parents + 1] = parents[i]
+
+            for field_name, field_val in pairs(prototype) do
+                if not new_class.prototype[field_name] then
+                    new_class.prototype[field_name] = field_val
+                end
             end
         end
 
-        setmetatable(newClass, { __call = newClass.new })
-        return newClass
+        setmetatable(new_class, { __call = new_class.new })
+        return new_class
     end
 end
 --- @endregion
