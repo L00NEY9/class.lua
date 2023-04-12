@@ -1,7 +1,7 @@
 # OOP For lua
 ### How it work?
 To create a class, you just need to call the "class" function and pass the constructor function to it.
-Unlike the standard approach, in your constructor function you only need to register all the fields (global — private, local — public).
+Unlike the standard approach, in your constructor function you only need to register all the fields (global — public, local — private).
 OOP.lua intercepts changes to the global scope and writes them to the prototype of the class
 ### Examples
 #### Simple example
