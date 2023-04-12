@@ -102,7 +102,7 @@ end
 --- @region: API
 -- local objects = private
 -- global objects = public
-function class(init_function)
+local create_class = function(init_function)
     classes[#classes + 1] = {}
     decoratorsStack = {}
     decorators = {}
@@ -132,11 +132,11 @@ function class(init_function)
     return classes[#classes]
 end
 
-function inherit(...)
+function class(...)
     local parents = table:reverse(table:remove_duplicate({ ... }))
 
     return function(init_function)
-        local new_class = class(init_function)
+        local new_class = create_class(init_function)
         new_class.parents = {}
 
         for i = 1, #parents do
