@@ -1,5 +1,3 @@
--- Author: L00NEY
--- Pull request: b0ryakha
 -- BlastHack: https://www.blast.hk/threads/141275/
 -- Github: https://github.com/L00NEY9/class.lua
 -- Version: 2.1
@@ -46,16 +44,14 @@ end
 --- @endregion
 
 --- @region: help functions
-local classes, decoratorsStack, decorators = {}, {}, {}
+local classes = {}
 
-local collect_global_changes = function(init_changes, on_changes)
-    if not on_changes then on_changes = function() end end
+local collect_global_changes = function(init_changes)
     local changes = {}
 
     setmetatable(_G, {
         __newindex = function(self, key, value)
             changes[key] = value
-            on_changes(key)
         end
     })
 
@@ -88,14 +84,6 @@ local build_instance_from_prototype = function(prototype, current_class)
 
     return instance
 end
-
-local apply_prototype_decorators = function(prototype)
-    for field_name, _ in pairs(decorators) do
-        for _, decorator in ipairs(decorators[field_name]) do
-            decorator(prototype, field_name, classes[#classes])
-        end
-    end
-end
 --- @endregion
 
 
@@ -104,15 +92,8 @@ end
 -- global objects = public
 local create_class = function(init_function)
     classes[#classes + 1] = {}
-    decoratorsStack = {}
-    decorators = {}
 
-    local prototype = collect_global_changes(init_function, function(key)
-        decorators[key] = table:copy(decoratorsStack)
-        decoratorsStack = {}
-    end)
-
-    apply_prototype_decorators(prototype)
+    local prototype = collect_global_changes(init_function)
     classes[#classes].prototype = prototype
 
     classes[#classes].new = function(self, ...)
@@ -137,11 +118,11 @@ function class(...)
 
     return function(init_function)
         local new_class = create_class(init_function)
-        new_class.parents = {}
+        new_class.__parents = {}
 
         for i = 1, #parents do
             local prototype = table:copy(parents[i].prototype)
-            new_class.parents[#new_class.parents + 1] = parents[i]
+            new_class.__parents[#new_class.__parents + 1] = parents[i]
 
             for field_name, field_val in pairs(prototype) do
                 if not new_class.prototype[field_name] then
